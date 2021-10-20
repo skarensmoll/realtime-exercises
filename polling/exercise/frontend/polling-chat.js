@@ -3,6 +3,7 @@ const msgs = document.getElementById("msgs");
 
 // let's store all current messages here
 let allChat = [];
+let failedTries = 0;
 
 // the interval to poll at in milliseconds
 const INTERVAL = 3000;
@@ -39,13 +40,18 @@ async function getNewMsgs() {
     if(res.status >= 400) {
       throw new Error("request did not succeed" + res.status);
     }
+
+    allChat = json.msg;
+    render();
+    failedTries = 0;
+
   } catch (err) {
     // backoff code
-    console.error("polling error", e);)
+    console.error("polling error", err);
+    failedTries +=1;
   }
 
-  allChat = json.msg;
-  render();
+
   //setTimeout(getNewMsgs, INTERVAL);
 
 }
@@ -66,12 +72,13 @@ const template = (user, msg) =>
 // make the first request
 getNewMsgs();
 
+const BACKOFF = 5000;
 let timeToMakeNextRequest = 0;
 async function reqTimeFrame(time) {
   console.log('reqTimeFrame');
   if(timeToMakeNextRequest <= time) {
     await getNewMsgs();
-    timeToMakeNextRequest = time + INTERVAL;
+    timeToMakeNextRequest = time + INTERVAL + (failedTries * BACKOFF);
   }
   requestAnimationFrame(reqTimeFrame);
 }
